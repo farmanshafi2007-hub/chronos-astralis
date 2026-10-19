@@ -1,18 +1,1653 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Chronos Astralis — 3D Horological Orrery</title>
-    <meta name="description" content="Interactive 3D mechanical tourbillon calibre and celestial armillary orrery built with Three.js studio PBR rendering." />
-    <meta property="og:title" content="Chronos Astralis — 3D Horological Orrery" />
-    <meta property="og:description" content="Interactive 3D mechanical tourbillon calibre and celestial armillary orrery built with Three.js studio PBR rendering." />
-    <meta property="og:type" content="website" />
-    <meta name="twitter:card" content="summary_large_image" />
-  </head>
-  <body class="bg-[#0b0d13] text-slate-100">
-    <div id="root"></div>
-    <script type="module" src="./src/main.tsx"></script>
-  </body>
-</html>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Chronos Astralis — 3D Horological Orrery</title>
+  <meta name="description" content="Interactive 3D mechanical tourbillon calibre and celestial armillary orrery built with Three.js studio PBR rendering." />
+  <style>
+    :root {
+      --bg-canvas: #0b0d13;
+      --surface-panel: rgba(13, 17, 26, 0.95);
+      --surface-inner: #141a28;
+      --border-subtle: rgba(30, 41, 59, 0.95);
+      --text-primary: #f1f5f9;
+      --text-secondary: #cbd5e1;
+      --text-muted: #94a3b8;
+      --accent-amber: #fbbf24;
+      --accent-amber-soft: rgba(251, 191, 36, 0.18);
+      --font-display: 'Cormorant Garamond', Georgia, 'Times New Roman', serif;
+      --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    }
 
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background-color: var(--bg-canvas);
+      color: var(--text-primary);
+      font-family: var(--font-sans);
+      -webkit-font-smoothing: antialiased;
+      user-select: none;
+    }
+
+    #canvas-container {
+      position: fixed;
+      inset: 0;
+      width: 100vw;
+      height: 100vh;
+      z-index: 1;
+    }
+
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+      cursor: grab;
+      outline: none;
+    }
+
+    canvas:active {
+      cursor: grabbing;
+    }
+
+    /* Top Header & Telemetry Spec Badge */
+    .top-bar {
+      position: fixed;
+      top: 16px;
+      left: 16px;
+      right: 16px;
+      z-index: 20;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+      pointer-events: none;
+    }
+
+    .spec-badge {
+      pointer-events: auto;
+      max-width: 440px;
+      background: var(--surface-panel);
+      border: 1px solid var(--border-subtle);
+      border-radius: 12px;
+      padding: 12px 16px;
+      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
+    }
+
+    .spec-header {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .brand-title {
+      font-family: var(--font-display);
+      font-size: 1.45rem;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+      color: var(--text-primary);
+      white-space: nowrap;
+    }
+
+    .calibre-tag {
+      font-family: var(--font-mono);
+      font-variant-numeric: tabular-nums;
+      font-size: 0.75rem;
+      color: #fde68a;
+      white-space: nowrap;
+    }
+
+    .spec-subtitle {
+      margin-top: 3px;
+      font-size: 0.75rem;
+      color: var(--text-muted);
+    }
+
+    .spec-divider {
+      margin-top: 8px;
+      padding-top: 8px;
+      border-top: 1px solid var(--border-subtle);
+    }
+
+    .telemetry-row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px;
+      font-family: var(--font-mono);
+      font-variant-numeric: tabular-nums;
+      font-size: 0.7rem;
+      color: var(--text-muted);
+    }
+
+    .assembly-focus-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    .assembly-focus-title {
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: #fde68a;
+    }
+
+    .clear-btn {
+      background: transparent;
+      border: 1px solid rgba(148, 163, 184, 0.25);
+      color: var(--text-secondary);
+      border-radius: 5px;
+      padding: 2px 8px;
+      font-size: 0.68rem;
+      cursor: pointer;
+    }
+
+    .clear-btn:hover {
+      background: rgba(255, 255, 255, 0.08);
+      color: #fff;
+    }
+
+    .assembly-focus-meta {
+      margin-top: 3px;
+      font-size: 0.7rem;
+      color: var(--text-muted);
+    }
+
+    .assembly-focus-desc {
+      margin-top: 5px;
+      font-size: 0.74rem;
+      line-height: 1.45;
+      color: var(--text-secondary);
+    }
+
+    .top-actions {
+      pointer-events: auto;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .action-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: var(--surface-panel);
+      border: 1px solid var(--border-subtle);
+      color: var(--text-primary);
+      padding: 8px 14px;
+      border-radius: 8px;
+      font-size: 0.76rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: border-color 0.15s ease, color 0.15s ease;
+      white-space: nowrap;
+    }
+
+    .action-btn:hover {
+      border-color: rgba(251, 191, 36, 0.55);
+      color: #fff;
+    }
+
+    /* Bottom Collapsible Control Dock */
+    .bottom-dock-wrapper {
+      position: fixed;
+      bottom: 14px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 95vw;
+      max-width: 920px;
+      z-index: 20;
+      pointer-events: none;
+    }
+
+    .collapse-tab-row {
+      display: flex;
+      justify-content: center;
+    }
+
+    .collapse-btn {
+      pointer-events: auto;
+      background: var(--surface-panel);
+      border: 1px solid var(--border-subtle);
+      border-bottom: none;
+      color: var(--text-secondary);
+      padding: 5px 14px;
+      border-radius: 8px 8px 0 0;
+      font-size: 0.74rem;
+      font-weight: 500;
+      cursor: pointer;
+    }
+
+    .collapse-btn:hover {
+      color: #fff;
+    }
+
+    .dock-panel {
+      pointer-events: auto;
+      background: var(--surface-panel);
+      border: 1px solid var(--border-subtle);
+      border-radius: 12px;
+      padding: 12px 14px;
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.65);
+    }
+
+    .dock-panel.hidden {
+      display: none;
+    }
+
+    .dock-top-row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+
+    .tablist {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+      background: var(--surface-inner);
+      padding: 4px;
+      border-radius: 8px;
+    }
+
+    .tab-btn {
+      background: transparent;
+      border: none;
+      color: var(--text-secondary);
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-size: 0.75rem;
+      font-weight: 500;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: background 0.15s ease, color 0.15s ease;
+    }
+
+    .tab-btn:hover {
+      color: #fff;
+    }
+
+    .tab-btn.active {
+      background: var(--accent-amber);
+      color: #090d16;
+      font-weight: 600;
+    }
+
+    .hint-text {
+      font-size: 0.72rem;
+      color: var(--text-muted);
+    }
+
+    .tab-pane {
+      display: none;
+      padding-top: 12px;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    .tab-pane.active {
+      display: flex;
+    }
+
+    .slider-group {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex: 1;
+      min-width: 220px;
+    }
+
+    .slider-label {
+      font-size: 0.75rem;
+      font-weight: 500;
+      color: var(--text-secondary);
+      white-space: nowrap;
+    }
+
+    input[type="range"] {
+      flex: 1;
+      height: 6px;
+      background: #334155;
+      border-radius: 6px;
+      appearance: none;
+      cursor: pointer;
+      accent-color: var(--accent-amber);
+    }
+
+    .slider-val {
+      width: 42px;
+      text-align: right;
+      font-family: var(--font-mono);
+      font-variant-numeric: tabular-nums;
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: var(--accent-amber);
+    }
+
+    .btn-row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .group-label {
+      font-size: 0.74rem;
+      color: var(--text-muted);
+      margin-right: 4px;
+    }
+
+    .chip-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: var(--surface-inner);
+      border: 1px solid var(--border-subtle);
+      color: var(--text-secondary);
+      padding: 6px 10px;
+      border-radius: 6px;
+      font-size: 0.74rem;
+      font-weight: 500;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all 0.15s ease;
+    }
+
+    .chip-btn:hover {
+      border-color: #475569;
+      color: #fff;
+    }
+
+    .chip-btn.active {
+      border-color: var(--accent-amber);
+      background: var(--accent-amber-soft);
+      color: #fde68a;
+    }
+
+    .swatch-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      border: 1px solid rgba(255, 255, 255, 0.35);
+    }
+
+    @media (max-width: 640px) {
+      .hint-text {
+        display: none;
+      }
+      .assembly-focus-desc {
+        display: none;
+      }
+      .tablist {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        width: 100%;
+      }
+    }
+  </style>
+
+  <!-- Import Map for Three.js r170 ES Modules -->
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
+      }
+    }
+  </script>
+</head>
+<body>
+  <!-- Dedicated 3D Viewport Container -->
+  <div id="canvas-container"></div>
+
+  <!-- Top Header & Telemetry Spec Badge -->
+  <header class="top-bar">
+    <div class="spec-badge">
+      <div class="spec-header">
+        <h1 class="brand-title">Chronos Astralis</h1>
+        <span id="calibre-freq-label" class="calibre-tag">Calibre CA-01 · 4.0 Hz</span>
+      </div>
+      <p class="spec-subtitle">
+        <span>Co-Axial Tourbillon &amp; Orrery</span> ·
+        <span id="active-finish-label">18k Rose Gold</span> ·
+        <span id="active-explode-label">Explode 0%</span>
+      </p>
+
+      <div id="telemetry-default" class="spec-divider telemetry-row">
+        <span id="tel-elapsed">Elapsed: 0.0s</span>
+        <span>·</span>
+        <span id="tel-rpm">Carriage: 1.0 RPM</span>
+        <span>·</span>
+        <span id="tel-balance">Balance: 0°</span>
+      </div>
+
+      <div id="assembly-detail" class="spec-divider" style="display: none;">
+        <div class="assembly-focus-header">
+          <span id="asm-title" class="assembly-focus-title"></span>
+          <button id="clear-focus-btn" class="clear-btn" type="button">Clear Focus</button>
+        </div>
+        <p id="asm-meta" class="assembly-focus-meta"></p>
+        <p id="asm-desc" class="assembly-focus-desc"></p>
+      </div>
+    </div>
+
+    <div class="top-actions">
+      <button id="quick-explode-btn" class="action-btn" type="button">Explode Calibre</button>
+      <button id="reset-all-btn" class="action-btn" type="button">Reset</button>
+    </div>
+  </header>
+
+  <!-- Unified Bottom Collapsible Control Dock -->
+  <aside class="bottom-dock-wrapper" aria-label="Calibre Interactive Controls">
+    <div class="collapse-tab-row">
+      <button id="collapse-dock-btn" class="collapse-btn" type="button">▾ Hide Controls (H)</button>
+    </div>
+
+    <div id="dock-panel" class="dock-panel">
+      <div class="dock-top-row">
+        <div class="tablist" role="tablist">
+          <button class="tab-btn active" data-tab="explode" type="button">Exploded &amp; Layers</button>
+          <button class="tab-btn" data-tab="finishes" type="button">Finishes &amp; Studio</button>
+          <button class="tab-btn" data-tab="kinematics" type="button">Escapement &amp; Time</button>
+          <button class="tab-btn" data-tab="cameras" type="button">Camera Angles</button>
+        </div>
+        <span class="hint-text">Drag to Orbit · Scroll to Zoom · Click Part to Inspect</span>
+      </div>
+
+      <!-- Tab 1: Exploded & Layers -->
+      <div id="pane-explode" class="tab-pane active">
+        <div class="slider-group">
+          <label for="explode-slider" class="slider-label">Axial Separation</label>
+          <input id="explode-slider" type="range" min="0" max="100" step="1" value="0" />
+          <span id="explode-slider-val" class="slider-val">0%</span>
+        </div>
+        <div id="layer-buttons" class="btn-row"></div>
+      </div>
+
+      <!-- Tab 2: Finishes & Studio -->
+      <div id="pane-finishes" class="tab-pane">
+        <div id="finish-buttons" class="btn-row">
+          <span class="group-label">Metallurgy:</span>
+        </div>
+        <div id="lighting-buttons" class="btn-row">
+          <span class="group-label">Lighting:</span>
+        </div>
+      </div>
+
+      <!-- Tab 3: Escapement & Time -->
+      <div id="pane-kinematics" class="tab-pane">
+        <div id="vph-buttons" class="btn-row">
+          <span class="group-label">Beat:</span>
+        </div>
+        <div id="speed-buttons" class="btn-row">
+          <span class="group-label">Speed:</span>
+        </div>
+      </div>
+
+      <!-- Tab 4: Camera Angles -->
+      <div id="pane-cameras" class="tab-pane">
+        <div id="camera-buttons" class="btn-row">
+          <span class="group-label">Optical Framing:</span>
+        </div>
+        <span class="hint-text">Smooth exponential camera damping enabled</span>
+      </div>
+    </div>
+  </aside>
+
+  <script type="module">
+    import * as THREE from 'three';
+    import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+    import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+    import { RectAreaLightUniformsLib } from 'three/addons/lights/RectAreaLightUniformsLib.js';
+
+    // =========================================================================
+    // 1. HOROLOGICAL SPECIFICATIONS & PRESETS
+    // =========================================================================
+    const CALIBRE_ASSEMBLIES = [
+      {
+        index: 0,
+        shortLabel: '01 Plinth',
+        name: '01. Architectural Plinth & Chapter Ring',
+        explodedOffset: 0.0,
+        gearRatio: 'Fixed Datum (1 : 1)',
+        materialSummary: 'Turned Obsidian Alloy & Satin Chapter Track',
+        description: 'Lathe-turned multi-stepped foundation anchored flush to the studio horizon with an engraved 60-minute chapter ring.'
+      },
+      {
+        index: 1,
+        shortLabel: '02 Mainplate',
+        name: '02. Skeletonized Mainplate & Pillars',
+        explodedOffset: 0.34,
+        gearRatio: 'Structural Frame',
+        materialSummary: 'Anisotropic Brushed Metal & Heat-Blued Fasteners',
+        description: 'CNC-beveled openworked mainplate supporting the gear train arbor bearings, flanked by four fluted architectural columns.'
+      },
+      {
+        index: 2,
+        shortLabel: '03 Gear Train',
+        name: '03. Involute Gear Train & Ruby Bearings',
+        explodedOffset: 0.72,
+        gearRatio: '1 : 8 : 60 : 360',
+        materialSummary: 'Mirror-Polished Brass Teeth & Synthetic Corundum Rubies',
+        description: 'Four meshing involute gear assemblies transferring torque from the mainspring barrel to the escapement with ruby bearings.'
+      },
+      {
+        index: 3,
+        shortLabel: '04 Tourbillon',
+        name: '04. Co-Axial Tourbillon & Hairspring',
+        explodedOffset: 1.12,
+        gearRatio: '60s Carriage · Harmonic Oscillator',
+        materialSummary: 'Titanium Bridge, Gold Timing Weights & Steel Spring',
+        description: 'Rotating tourbillon cage averaging out positional gravity errors, housing a breathing helical hairspring and balance wheel.'
+      },
+      {
+        index: 4,
+        shortLabel: '05 Orrery',
+        name: '05. Armillary Sphere & Tellurion Orrery',
+        explodedOffset: 1.56,
+        gearRatio: '365.25 : 29.53 : 87.97 Synodic',
+        materialSummary: 'Spun Gold Sol, Lapis Terra, Silver Luna & Graduated Rings',
+        description: 'Keplerian planetary mechanism coupling Earth axial inclination, lunar orbit, Mercury, and Venus inside twin armillary rings.'
+      },
+      {
+        index: 5,
+        shortLabel: '06 Sapphire',
+        name: '06. Optical Sapphire Dome & Bezel Crown',
+        explodedOffset: 2.08,
+        gearRatio: 'Hermetic Enclosure (IOR 1.77)',
+        materialSummary: 'Optical Corundum Crystal & Beveled Retention Ring',
+        description: 'High-transmission hemispherical sapphire dome with physical refraction and a chamfered upper bezel ring.'
+      }
+    ];
+
+    const FINISH_PALETTES = {
+      'rose-gold': {
+        id: 'rose-gold',
+        label: '18k Rose Gold',
+        primaryMetalHex: 0xe6a88a,
+        secondaryMetalHex: 0xc9cbd4,
+        accentMetalHex: 0x3b82f6,
+        baseChassisHex: 0x181b24,
+        dialBgHex: '#10131a',
+        dialInkHex: '#f3d5c3',
+        dialAccentHex: '#e6a88a',
+        swatchCss: '#e6a88a'
+      },
+      'titanium-blued': {
+        id: 'titanium-blued',
+        label: 'Grade 5 Titanium',
+        primaryMetalHex: 0xd0d7e2,
+        secondaryMetalHex: 0x94a3b8,
+        accentMetalHex: 0x2563eb,
+        baseChassisHex: 0x111827,
+        dialBgHex: '#0d1422',
+        dialInkHex: '#e2e8f0',
+        dialAccentHex: '#60a5fa',
+        swatchCss: '#93c5fd'
+      },
+      'platinum-emerald': {
+        id: 'platinum-emerald',
+        label: '950 Platinum',
+        primaryMetalHex: 0xe5e7eb,
+        secondaryMetalHex: 0xd4af37,
+        accentMetalHex: 0x10b981,
+        baseChassisHex: 0x0c211b,
+        dialBgHex: '#091c16',
+        dialInkHex: '#ecfdf5',
+        dialAccentHex: '#34d399',
+        swatchCss: '#34d399'
+      },
+      'vintage-brass': {
+        id: 'vintage-brass',
+        label: 'Observatory Brass',
+        primaryMetalHex: 0xdfb15b,
+        secondaryMetalHex: 0xb87333,
+        accentMetalHex: 0x60a5fa,
+        baseChassisHex: 0x171f36,
+        dialBgHex: '#11192e',
+        dialInkHex: '#fef3c7',
+        dialAccentHex: '#f59e0b',
+        swatchCss: '#dfb15b'
+      }
+    };
+
+    const LIGHTING_CONFIGS = {
+      'atelier-warm': {
+        id: 'atelier-warm',
+        label: 'Atelier Warm',
+        backgroundHex: 0x0b0d13,
+        fogHex: 0x0b0d13,
+        fogDensity: 0.032,
+        keyColorHex: 0xfff0dd,
+        keyIntensity: 2.8,
+        hemiSkyHex: 0x7aa2f7,
+        hemiGroundHex: 0x1f1916,
+        hemiIntensity: 0.85,
+        rimColorHex: 0x93c5fd,
+        rimIntensity: 1.7,
+        exposure: 1.12
+      },
+      'observatory-twilight': {
+        id: 'observatory-twilight',
+        label: 'Observatory Dome',
+        backgroundHex: 0x070b16,
+        fogHex: 0x070b16,
+        fogDensity: 0.035,
+        keyColorHex: 0xfde68a,
+        keyIntensity: 2.5,
+        hemiSkyHex: 0x38bdf8,
+        hemiGroundHex: 0x0f172a,
+        hemiIntensity: 1.0,
+        rimColorHex: 0x60a5fa,
+        rimIntensity: 2.2,
+        exposure: 1.15
+      },
+      'museum-contrast': {
+        id: 'museum-contrast',
+        label: 'Museum Spotlight',
+        backgroundHex: 0x09090b,
+        fogHex: 0x09090b,
+        fogDensity: 0.04,
+        keyColorHex: 0xffedd5,
+        keyIntensity: 3.4,
+        hemiSkyHex: 0x94a3b8,
+        hemiGroundHex: 0x18181b,
+        hemiIntensity: 0.55,
+        rimColorHex: 0xfca5a5,
+        rimIntensity: 1.4,
+        exposure: 1.08
+      }
+    };
+
+    const CAMERA_PRESETS = {
+      'overview': { label: '3/4 Atelier View', position: [5.4, 4.3, 6.2], target: [0, 0.9, 0] },
+      'tourbillon-macro': { label: 'Tourbillon Macro', position: [2.35, 2.2, 2.75], target: [0, 0.85, 0] },
+      'orrery-zenith': { label: 'Celestial Zenith', position: [0.01, 7.6, 2.2], target: [0, 1.0, 0] },
+      'gear-profile': { label: 'Elevation Profile', position: [6.8, 1.45, 0.4], target: [0, 1.05, 0] }
+    };
+
+    // =========================================================================
+    // 2. PROCEDURAL CANVAS TEXTURES & WEB AUDIO ESCAPEMENT SYNTH
+    // =========================================================================
+    function createChapterDialTexture(palette, maxAnisotropy) {
+      const size = 1024;
+      const canvas = document.createElement('canvas');
+      canvas.width = size;
+      canvas.height = size;
+      const ctx = canvas.getContext('2d');
+      const cx = size / 2;
+      const cy = size / 2;
+      const rMax = size * 0.48;
+
+      const grad = ctx.createRadialGradient(cx, cy, rMax * 0.05, cx, cy, rMax);
+      grad.addColorStop(0, palette.dialBgHex);
+      grad.addColorStop(0.72, palette.dialBgHex);
+      grad.addColorStop(1, '#05070b');
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, size, size);
+
+      ctx.strokeStyle = palette.dialAccentHex;
+      ctx.globalAlpha = 0.16;
+      ctx.lineWidth = 1.2;
+      for (let r = rMax * 0.18; r <= rMax * 0.72; r += rMax * 0.025) {
+        ctx.beginPath();
+        ctx.arc(cx, cy, r, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+
+      ctx.globalAlpha = 0.85;
+      ctx.strokeStyle = palette.dialInkHex;
+      ctx.lineWidth = size * 0.003;
+      [0.96, 0.84, 0.74].forEach((ratio) => {
+        ctx.beginPath();
+        ctx.arc(cx, cy, rMax * ratio, 0, Math.PI * 2);
+        ctx.stroke();
+      });
+
+      const romans = ['XII', 'I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'XI'];
+      ctx.fillStyle = palette.dialInkHex;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+
+      for (let i = 0; i < 60; i++) {
+        const angle = (i / 60) * Math.PI * 2 - Math.PI / 2;
+        const isMajor = i % 5 === 0;
+        const innerR = rMax * (isMajor ? 0.85 : 0.9);
+        const outerR = rMax * 0.955;
+
+        ctx.strokeStyle = isMajor ? palette.dialAccentHex : palette.dialInkHex;
+        ctx.lineWidth = isMajor ? size * 0.0045 : size * 0.002;
+        ctx.globalAlpha = isMajor ? 0.95 : 0.55;
+
+        ctx.beginPath();
+        ctx.moveTo(cx + Math.cos(angle) * innerR, cy + Math.sin(angle) * innerR);
+        ctx.lineTo(cx + Math.cos(angle) * outerR, cy + Math.sin(angle) * outerR);
+        ctx.stroke();
+
+        if (isMajor) {
+          const hourIndex = i / 5;
+          const textR = rMax * 0.79;
+          ctx.save();
+          ctx.translate(cx + Math.cos(angle) * textR, cy + Math.sin(angle) * textR);
+          ctx.rotate(angle + Math.PI / 2);
+          ctx.globalAlpha = 0.95;
+          ctx.font = `600 ${Math.round(size * 0.036)}px Georgia, serif`;
+          ctx.fillText(romans[hourIndex], 0, 0);
+          ctx.restore();
+        }
+      }
+
+      const texture = new THREE.CanvasTexture(canvas);
+      texture.colorSpace = THREE.SRGBColorSpace;
+      texture.anisotropy = maxAnisotropy;
+      return texture;
+    }
+
+    function createBrushedMetalBumpTexture(maxAnisotropy) {
+      const size = 512;
+      const canvas = document.createElement('canvas');
+      canvas.width = size;
+      canvas.height = size;
+      const ctx = canvas.getContext('2d');
+      ctx.fillStyle = '#808080';
+      ctx.fillRect(0, 0, size, size);
+
+      for (let y = 0; y < size; y += 2) {
+        const wave = Math.sin((y / size) * Math.PI * 16) * 18;
+        const noise = ((y * 73) % 19) - 9;
+        const val = Math.max(0, Math.min(255, Math.round(128 + wave + noise)));
+        ctx.fillStyle = `rgb(${val},${val},${val})`;
+        ctx.fillRect(0, y, size, 2);
+      }
+
+      const texture = new THREE.CanvasTexture(canvas);
+      texture.colorSpace = THREE.NoColorSpace;
+      texture.wrapS = THREE.RepeatWrapping;
+      texture.wrapT = THREE.RepeatWrapping;
+      texture.repeat.set(3, 3);
+      texture.anisotropy = maxAnisotropy;
+      return texture;
+    }
+
+    function createContactShadowTexture() {
+      const size = 256;
+      const canvas = document.createElement('canvas');
+      canvas.width = size;
+      canvas.height = size;
+      const ctx = canvas.getContext('2d');
+      const half = size / 2;
+      const grad = ctx.createRadialGradient(half, half, half * 0.15, half, half, half * 0.96);
+      grad.addColorStop(0, 'rgba(0, 0, 0, 0.85)');
+      grad.addColorStop(0.55, 'rgba(0, 0, 0, 0.42)');
+      grad.addColorStop(1, 'rgba(0, 0, 0, 0.0)');
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, size, size);
+      const texture = new THREE.CanvasTexture(canvas);
+      texture.colorSpace = THREE.SRGBColorSpace;
+      return texture;
+    }
+
+    class EscapementAudio {
+      constructor() {
+        this.ctx = null;
+        this.enabled = false;
+        this.lastTick = -1;
+      }
+      toggle() {
+        this.enabled = !this.enabled;
+        if (this.enabled && !this.ctx) {
+          const AudioCtx = window.AudioContext || window.webkitAudioContext;
+          if (AudioCtx) this.ctx = new AudioCtx();
+        }
+        if (this.ctx && this.ctx.state === 'suspended') this.ctx.resume();
+        return this.enabled;
+      }
+      update(simTime, ticksPerSec, timeScale) {
+        if (!this.enabled || !this.ctx || timeScale <= 0 || timeScale > 12) return;
+        const tick = Math.floor(simTime * ticksPerSec);
+        if (tick !== this.lastTick) {
+          this.lastTick = tick;
+          const isEven = tick % 2 === 0;
+          const now = this.ctx.currentTime;
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = 'triangle';
+          osc.frequency.setValueAtTime(isEven ? 4200 : 4850, now);
+          osc.frequency.exponentialRampToValueAtTime(980, now + 0.018);
+          gain.gain.setValueAtTime(0.0001, now);
+          gain.gain.linearRampToValueAtTime(isEven ? 0.05 : 0.04, now + 0.0015);
+          gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.022);
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+          osc.start(now);
+          osc.stop(now + 0.024);
+        }
+      }
+    }
+
+    // =========================================================================
+    // 3. PROCEDURAL 3D GEOMETRY & SCENE INITIALIZATION
+    // =========================================================================
+    function createInvoluteGearGeometry(outerRadius, innerRimRadius, hubRadius, teethCount, thickness, spokeCount) {
+      const shape = new THREE.Shape();
+      const toothPitch = (Math.PI * 2) / teethCount;
+      const addendum = outerRadius;
+      const dedendum = outerRadius * 0.89;
+
+      for (let i = 0; i < teethCount; i++) {
+        const a0 = i * toothPitch;
+        const a1 = a0 + toothPitch * 0.22;
+        const a2 = a0 + toothPitch * 0.36;
+        const a3 = a0 + toothPitch * 0.64;
+        const a4 = a0 + toothPitch * 0.78;
+        const p0x = Math.cos(a0) * dedendum;
+        const p0y = Math.sin(a0) * dedendum;
+        if (i === 0) shape.moveTo(p0x, p0y);
+        else shape.lineTo(p0x, p0y);
+        shape.lineTo(Math.cos(a1) * dedendum, Math.sin(a1) * dedendum);
+        shape.lineTo(Math.cos(a2) * addendum, Math.sin(a2) * addendum);
+        shape.lineTo(Math.cos(a3) * addendum, Math.sin(a3) * addendum);
+        shape.lineTo(Math.cos(a4) * dedendum, Math.sin(a4) * dedendum);
+      }
+      shape.closePath();
+
+      if (spokeCount > 0 && innerRimRadius > hubRadius * 1.25) {
+        const windowPitch = (Math.PI * 2) / spokeCount;
+        const spokeHalfAngle = 0.14;
+        for (let s = 0; s < spokeCount; s++) {
+          const startA = s * windowPitch + spokeHalfAngle;
+          const endA = (s + 1) * windowPitch - spokeHalfAngle;
+          const hole = new THREE.Path();
+          const steps = 10;
+          hole.moveTo(Math.cos(startA) * hubRadius, Math.sin(startA) * hubRadius);
+          for (let k = 0; k <= steps; k++) {
+            const a = startA + ((endA - startA) * k) / steps;
+            hole.lineTo(Math.cos(a) * innerRimRadius, Math.sin(a) * innerRimRadius);
+          }
+          for (let k = steps; k >= 0; k--) {
+            const a = startA + ((endA - startA) * k) / steps;
+            hole.lineTo(Math.cos(a) * hubRadius, Math.sin(a) * hubRadius);
+          }
+          hole.closePath();
+          shape.holes.push(hole);
+        }
+      }
+
+      const arborHole = new THREE.Path();
+      arborHole.absarc(0, 0, hubRadius * 0.38, 0, Math.PI * 2, false);
+      shape.holes.push(arborHole);
+
+      const geo = new THREE.ExtrudeGeometry(shape, {
+        depth: thickness,
+        bevelEnabled: true,
+        bevelThickness: thickness * 0.16,
+        bevelSize: thickness * 0.14,
+        bevelSegments: 2,
+        curveSegments: 16
+      });
+      geo.rotateX(-Math.PI / 2);
+      geo.translate(0, -thickness / 2, 0);
+      return geo;
+    }
+
+    function createHairspringGeometry(turns, innerR, outerR) {
+      const points = [];
+      const totalSteps = turns * 32;
+      for (let i = 0; i <= totalSteps; i++) {
+        const t = i / totalSteps;
+        const angle = t * turns * Math.PI * 2;
+        const r = innerR + (outerR - innerR) * t;
+        const y = Math.sin(t * Math.PI) * 0.025;
+        points.push(new THREE.Vector3(Math.cos(angle) * r, y, Math.sin(angle) * r));
+      }
+      return new THREE.TubeGeometry(new THREE.CatmullRomCurve3(points), totalSteps, 0.011, 8, false);
+    }
+
+    // Application State
+    const appState = {
+      explodedTarget: 0,
+      explodedCurrent: 0,
+      finishId: 'rose-gold',
+      lightingId: 'atelier-warm',
+      cameraPresetId: 'overview',
+      isCameraTransitioning: false,
+      vph: 28800,
+      timeScale: 1,
+      selectedAssembly: null
+    };
+
+    const container = document.getElementById('canvas-container');
+    const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.12;
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    container.appendChild(renderer.domElement);
+
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x0b0d13);
+    scene.fog = new THREE.FogExp2(0x0b0d13, 0.032);
+
+    const pmremGenerator = new THREE.PMREMGenerator(renderer);
+    scene.environment = pmremGenerator.fromScene(new RoomEnvironment(), 0.04).texture;
+    pmremGenerator.dispose();
+
+    const camera = new THREE.PerspectiveCamera(40, window.innerWidth / window.innerHeight, 0.1, 100);
+    camera.position.set(5.4, 4.3, 6.2);
+
+    const controls = new OrbitControls(camera, renderer.domElement);
+    controls.target.set(0, 0.9, 0);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.06;
+    controls.minDistance = 1.9;
+    controls.maxDistance = 15.5;
+    controls.maxPolarAngle = Math.PI * 0.485;
+    controls.update();
+    controls.addEventListener('start', () => { appState.isCameraTransitioning = false; });
+
+    // Studio Lighting
+    RectAreaLightUniformsLib.init();
+    const keyLight = new THREE.DirectionalLight(0xfff0dd, 2.8);
+    keyLight.position.set(5.5, 8.5, 4.5);
+    keyLight.castShadow = true;
+    keyLight.shadow.mapSize.set(1024, 1024);
+    const d = 4.2;
+    keyLight.shadow.camera.left = -d;
+    keyLight.shadow.camera.right = d;
+    keyLight.shadow.camera.top = d;
+    keyLight.shadow.camera.bottom = -d;
+    keyLight.shadow.bias = -0.0005;
+    keyLight.shadow.normalBias = 0.02;
+    scene.add(keyLight);
+
+    const hemiLight = new THREE.HemisphereLight(0x7aa2f7, 0x1f1916, 0.85);
+    hemiLight.position.set(0, 12, 0);
+    scene.add(hemiLight);
+
+    const rimLight = new THREE.DirectionalLight(0x93c5fd, 1.7);
+    rimLight.position.set(-5.0, 4.2, -5.5);
+    scene.add(rimLight);
+
+    const topSoftbox = new THREE.RectAreaLight(0xfff7ed, 3.2, 4.5, 4.5);
+    topSoftbox.position.set(0, 6.5, 0);
+    topSoftbox.lookAt(0, 1.0, 0);
+    scene.add(topSoftbox);
+
+    // Materials & Textures
+    const maxAniso = renderer.capabilities.getMaxAnisotropy();
+    const brushedBump = createBrushedMetalBumpTexture(maxAniso);
+    const initialPalette = FINISH_PALETTES[appState.finishId];
+
+    const primaryMetalMat = new THREE.MeshPhysicalMaterial({
+      color: initialPalette.primaryMetalHex,
+      metalness: 0.92,
+      roughness: 0.18,
+      anisotropy: 0.75,
+      clearcoat: 0.35,
+      bumpMap: brushedBump,
+      bumpScale: 0.008
+    });
+
+    const secondaryMetalMat = new THREE.MeshStandardMaterial({
+      color: initialPalette.secondaryMetalHex,
+      metalness: 0.86,
+      roughness: 0.44,
+      bumpMap: brushedBump,
+      bumpScale: 0.012
+    });
+
+    const accentBluedMat = new THREE.MeshPhysicalMaterial({
+      color: initialPalette.accentMetalHex,
+      metalness: 0.9,
+      roughness: 0.14,
+      clearcoat: 0.65
+    });
+
+    const matteChassisMat = new THREE.MeshStandardMaterial({
+      color: initialPalette.baseChassisHex,
+      metalness: 0.35,
+      roughness: 0.76,
+      bumpMap: brushedBump,
+      bumpScale: 0.015
+    });
+
+    const rubyJewelMat = new THREE.MeshPhysicalMaterial({
+      color: 0xe11d48,
+      emissive: 0x4c0519,
+      emissiveIntensity: 0.35,
+      metalness: 0.05,
+      roughness: 0.08,
+      transmission: 0.78,
+      ior: 1.77,
+      thickness: 0.35,
+      clearcoat: 1.0
+    });
+
+    const dialSurfaceMat = new THREE.MeshStandardMaterial({
+      color: 0xffffff,
+      map: createChapterDialTexture(initialPalette, maxAniso),
+      metalness: 0.3,
+      roughness: 0.42,
+      polygonOffset: true,
+      polygonOffsetFactor: -1,
+      polygonOffsetUnits: -1
+    });
+
+    const sapphireDomeMat = new THREE.MeshPhysicalMaterial({
+      color: 0xffffff,
+      metalness: 0.0,
+      roughness: 0.05,
+      transmission: 0.92,
+      transparent: true,
+      ior: 1.77,
+      thickness: 0.85,
+      attenuationColor: new THREE.Color(0xe0f2fe),
+      attenuationDistance: 4.5,
+      clearcoat: 1.0,
+      depthWrite: false
+    });
+
+    const solMat = new THREE.MeshPhysicalMaterial({
+      color: 0xfbbf24,
+      emissive: 0xd97706,
+      emissiveIntensity: 0.45,
+      metalness: 0.85,
+      roughness: 0.16,
+      clearcoat: 0.8
+    });
+
+    // Build 6-Layer Calibre Hierarchy
+    const rootGroup = new THREE.Group();
+    scene.add(rootGroup);
+    const assemblyGroups = [];
+    const interactableMeshes = [];
+
+    for (let i = 0; i < 6; i++) {
+      const g = new THREE.Group();
+      assemblyGroups.push(g);
+      rootGroup.add(g);
+    }
+
+    function tagMesh(obj, assemblyIndex, castShadow = true) {
+      obj.userData = { assemblyIndex };
+      obj.layers.enable(1);
+      if (obj.isMesh) {
+        obj.castShadow = castShadow;
+        obj.receiveShadow = true;
+      }
+      interactableMeshes.push(obj);
+    }
+
+    // Studio Floor & Contact Shadow
+    const floorGeo = new THREE.CircleGeometry(28, 64);
+    floorGeo.rotateX(-Math.PI / 2);
+    const studioFloor = new THREE.Mesh(floorGeo, new THREE.MeshStandardMaterial({ color: 0x0b0e15, roughness: 0.82, metalness: 0.15 }));
+    studioFloor.position.y = -0.02;
+    studioFloor.receiveShadow = true;
+    rootGroup.add(studioFloor);
+
+    const shadowGeo = new THREE.PlaneGeometry(7.6, 7.6);
+    shadowGeo.rotateX(-Math.PI / 2);
+    const shadowMesh = new THREE.Mesh(shadowGeo, new THREE.MeshBasicMaterial({ map: createContactShadowTexture(), transparent: true, opacity: 0.68, depthWrite: false }));
+    shadowMesh.position.y = 0.005;
+    rootGroup.add(shadowMesh);
+
+    // Layer 0: Plinth & Chapter Ring
+    const plinthPoints = [
+      new THREE.Vector2(0, 0), new THREE.Vector2(3.15, 0), new THREE.Vector2(3.15, 0.12),
+      new THREE.Vector2(2.98, 0.18), new THREE.Vector2(2.92, 0.34), new THREE.Vector2(2.74, 0.42), new THREE.Vector2(0, 0.42)
+    ];
+    const plinthMesh = new THREE.Mesh(new THREE.LatheGeometry(plinthPoints, 72), matteChassisMat);
+    tagMesh(plinthMesh, 0);
+    assemblyGroups[0].add(plinthMesh);
+
+    const lowerTrimGeo = new THREE.TorusGeometry(2.96, 0.045, 16, 72);
+    lowerTrimGeo.rotateX(Math.PI / 2);
+    const lowerTrimMesh = new THREE.Mesh(lowerTrimGeo, primaryMetalMat);
+    lowerTrimMesh.position.y = 0.22;
+    tagMesh(lowerTrimMesh, 0);
+    assemblyGroups[0].add(lowerTrimMesh);
+
+    const dialDiscMesh = new THREE.Mesh(new THREE.CylinderGeometry(2.68, 2.68, 0.03, 72), dialSurfaceMat);
+    dialDiscMesh.position.y = 0.435;
+    tagMesh(dialDiscMesh, 0, false);
+    assemblyGroups[0].add(dialDiscMesh);
+
+    const lugGeo = new THREE.BoxGeometry(0.36, 0.26, 0.48);
+    for (let i = 0; i < 4; i++) {
+      const a = (i * Math.PI) / 2 + Math.PI / 4;
+      const lug = new THREE.Mesh(lugGeo, secondaryMetalMat);
+      lug.position.set(Math.cos(a) * 2.98, 0.16, Math.sin(a) * 2.98);
+      lug.rotation.y = -a;
+      tagMesh(lug, 0);
+      assemblyGroups[0].add(lug);
+    }
+
+    // Layer 1: Mainplate, Fluted Pillars & Instanced Screws
+    const plateShape = new THREE.Shape();
+    plateShape.absarc(0, 0, 2.38, 0, Math.PI * 2, false);
+    for (let i = 0; i < 4; i++) {
+      const aStart = (i * Math.PI) / 2 + 0.24;
+      const aEnd = ((i + 1) * Math.PI) / 2 - 0.24;
+      const cutout = new THREE.Path();
+      cutout.absarc(0, 0, 1.92, aStart, aEnd, false);
+      cutout.absarc(0, 0, 0.72, aEnd, aStart, true);
+      cutout.closePath();
+      plateShape.holes.push(cutout);
+    }
+    const mainplateGeo = new THREE.ExtrudeGeometry(plateShape, { depth: 0.08, bevelEnabled: true, bevelThickness: 0.018, bevelSize: 0.018, bevelSegments: 2, curveSegments: 32 });
+    mainplateGeo.rotateX(-Math.PI / 2);
+    const mainplateMesh = new THREE.Mesh(mainplateGeo, secondaryMetalMat);
+    mainplateMesh.position.y = 0.56;
+    tagMesh(mainplateMesh, 1);
+    assemblyGroups[1].add(mainplateMesh);
+
+    const pillarPoints = [
+      new THREE.Vector2(0, 0), new THREE.Vector2(0.16, 0), new THREE.Vector2(0.16, 0.08),
+      new THREE.Vector2(0.105, 0.12), new THREE.Vector2(0.105, 0.72), new THREE.Vector2(0.16, 0.76),
+      new THREE.Vector2(0.16, 0.84), new THREE.Vector2(0, 0.84)
+    ];
+    const pillarGeo = new THREE.LatheGeometry(pillarPoints, 24);
+    for (let i = 0; i < 4; i++) {
+      const a = (i * Math.PI) / 2;
+      const pillar = new THREE.Mesh(pillarGeo, primaryMetalMat);
+      pillar.position.set(Math.cos(a) * 2.12, 0.46, Math.sin(a) * 2.12);
+      tagMesh(pillar, 1);
+      assemblyGroups[1].add(pillar);
+    }
+
+    const screwInstanced = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.042, 0.042, 0.05, 14), accentBluedMat, 36);
+    const _m4 = new THREE.Matrix4();
+    const _pos = new THREE.Vector3();
+    const _quat = new THREE.Quaternion();
+    const _scale = new THREE.Vector3(1, 1, 1);
+    for (let i = 0; i < 36; i++) {
+      const ringIdx = i < 24 ? 0 : 1;
+      const angle = ringIdx === 0 ? (i / 24) * Math.PI * 2 : ((i - 24) / 12) * Math.PI * 2 + 0.15;
+      const radius = ringIdx === 0 ? 2.26 : 0.62;
+      _pos.set(Math.cos(angle) * radius, 0.66, Math.sin(angle) * radius);
+      _quat.setFromAxisAngle(new THREE.Vector3(0, 1, 0), angle);
+      _m4.compose(_pos, _quat, _scale);
+      screwInstanced.setMatrixAt(i, _m4);
+    }
+    screwInstanced.instanceMatrix.needsUpdate = true;
+    screwInstanced.computeBoundingSphere();
+    tagMesh(screwInstanced, 1, false);
+    assemblyGroups[1].add(screwInstanced);
+
+    // Layer 2: Involute Gear Train
+    function buildGear(outerR, innerR, hubR, teeth, spokes, mat, x, y, z) {
+      const g = new THREE.Group();
+      g.position.set(x, y, z);
+      const gearMesh = new THREE.Mesh(createInvoluteGearGeometry(outerR, innerR, hubR, teeth, 0.065, spokes), mat);
+      tagMesh(gearMesh, 2);
+      g.add(gearMesh);
+      const arborMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.055, 0.055, 0.36, 16), secondaryMetalMat);
+      tagMesh(arborMesh, 2);
+      g.add(arborMesh);
+      const jewelMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.11, 0.11, 0.04, 20), rubyJewelMat);
+      jewelMesh.position.y = 0.06;
+      tagMesh(jewelMesh, 2, false);
+      g.add(jewelMesh);
+      assemblyGroups[2].add(g);
+      return g;
+    }
+
+    const mainspringWheel = buildGear(0.86, 0.68, 0.24, 36, 6, primaryMetalMat, -0.88, 0.76, -0.55);
+    const centerWheel = buildGear(0.72, 0.55, 0.2, 30, 5, secondaryMetalMat, 0.0, 0.82, 0.0);
+    const thirdWheel = buildGear(0.58, 0.42, 0.16, 24, 5, primaryMetalMat, 0.85, 0.78, -0.48);
+    const fourthWheel = buildGear(0.48, 0.34, 0.14, 20, 4, accentBluedMat, 0.0, 0.88, 0.78);
+
+    // Layer 3: Co-Axial Tourbillon Cage & Hairspring
+    const tourbillonCarriage = new THREE.Group();
+    tourbillonCarriage.position.set(0, 1.12, 0.78);
+    assemblyGroups[3].add(tourbillonCarriage);
+
+    const cageRingGeo = new THREE.TorusGeometry(0.56, 0.028, 14, 48);
+    cageRingGeo.rotateX(Math.PI / 2);
+    const lowerCage = new THREE.Mesh(cageRingGeo, secondaryMetalMat);
+    lowerCage.position.y = -0.14;
+    tagMesh(lowerCage, 3);
+    tourbillonCarriage.add(lowerCage);
+
+    const upperCage = new THREE.Mesh(cageRingGeo, secondaryMetalMat);
+    upperCage.position.y = 0.14;
+    tagMesh(upperCage, 3);
+    tourbillonCarriage.add(upperCage);
+
+    const balanceWheel = new THREE.Group();
+    tourbillonCarriage.add(balanceWheel);
+    const balRimGeo = new THREE.TorusGeometry(0.42, 0.024, 14, 48);
+    balRimGeo.rotateX(Math.PI / 2);
+    const balRim = new THREE.Mesh(balRimGeo, primaryMetalMat);
+    tagMesh(balRim, 3);
+    balanceWheel.add(balRim);
+
+    const balBar = new THREE.Mesh(new THREE.BoxGeometry(0.82, 0.022, 0.036), primaryMetalMat);
+    tagMesh(balBar, 3);
+    balanceWheel.add(balBar);
+
+    const hairspringMesh = new THREE.Mesh(createHairspringGeometry(4.5, 0.07, 0.31), accentBluedMat);
+    hairspringMesh.position.y = 0.045;
+    tagMesh(hairspringMesh, 3, false);
+    tourbillonCarriage.add(hairspringMesh);
+
+    const escapementWheel = new THREE.Mesh(createInvoluteGearGeometry(0.22, 0.15, 0.06, 15, 0.03, 3), rubyJewelMat);
+    escapementWheel.position.set(0.24, -0.06, 0);
+    tagMesh(escapementWheel, 3, false);
+    tourbillonCarriage.add(escapementWheel);
+
+    // Layer 4: Celestial Armillary & Tellurion Orrery
+    const orreryY = 1.68;
+    const solMesh = new THREE.Mesh(new THREE.SphereGeometry(0.28, 32, 24), solMat);
+    solMesh.position.set(0, orreryY, 0);
+    tagMesh(solMesh, 4);
+    assemblyGroups[4].add(solMesh);
+
+    const armillaryOuterRing = new THREE.Mesh(new THREE.TorusGeometry(2.05, 0.036, 16, 72), primaryMetalMat);
+    armillaryOuterRing.position.set(0, orreryY, 0);
+    tagMesh(armillaryOuterRing, 4);
+    assemblyGroups[4].add(armillaryOuterRing);
+
+    const innerArmGeo = new THREE.TorusGeometry(1.88, 0.028, 16, 72);
+    innerArmGeo.rotateY(Math.PI / 2);
+    const armillaryInnerRing = new THREE.Mesh(innerArmGeo, secondaryMetalMat);
+    armillaryInnerRing.position.set(0, orreryY, 0);
+    tagMesh(armillaryInnerRing, 4);
+    assemblyGroups[4].add(armillaryInnerRing);
+
+    const eclipticGeo = new THREE.TorusGeometry(2.12, 0.042, 16, 84);
+    eclipticGeo.rotateX(Math.PI / 2);
+    const eclipticBand = new THREE.Mesh(eclipticGeo, primaryMetalMat);
+    eclipticBand.position.set(0, orreryY, 0);
+    tagMesh(eclipticBand, 4);
+    assemblyGroups[4].add(eclipticBand);
+
+    const mercuryArm = new THREE.Group();
+    mercuryArm.position.set(0, orreryY - 0.18, 0);
+    const mercSphere = new THREE.Mesh(new THREE.SphereGeometry(0.075, 20, 16), secondaryMetalMat);
+    mercSphere.position.set(0.72, 0.12, 0);
+    tagMesh(mercSphere, 4);
+    mercuryArm.add(mercSphere);
+    assemblyGroups[4].add(mercuryArm);
+
+    const venusArm = new THREE.Group();
+    venusArm.position.set(0, orreryY - 0.1, 0);
+    const venusSphere = new THREE.Mesh(new THREE.SphereGeometry(0.11, 24, 18), primaryMetalMat);
+    venusSphere.position.set(1.15, 0.14, 0);
+    tagMesh(venusSphere, 4);
+    venusArm.add(venusSphere);
+    assemblyGroups[4].add(venusArm);
+
+    const earthArm = new THREE.Group();
+    earthArm.position.set(0, orreryY - 0.02, 0);
+    const earthGlobeGroup = new THREE.Group();
+    earthGlobeGroup.position.set(1.62, 0.16, 0);
+    earthGlobeGroup.rotation.z = THREE.MathUtils.degToRad(23.44);
+    const earthMesh = new THREE.Mesh(new THREE.SphereGeometry(0.145, 28, 20), accentBluedMat);
+    tagMesh(earthMesh, 4);
+    earthGlobeGroup.add(earthMesh);
+    earthArm.add(earthGlobeGroup);
+
+    const moonArm = new THREE.Group();
+    moonArm.position.set(1.62, 0.16, 0);
+    const moonMesh = new THREE.Mesh(new THREE.SphereGeometry(0.048, 16, 14), secondaryMetalMat);
+    moonMesh.position.set(0.32, 0.02, 0);
+    tagMesh(moonMesh, 4);
+    moonArm.add(moonMesh);
+    earthArm.add(moonArm);
+    assemblyGroups[4].add(earthArm);
+
+    // Layer 5: Sapphire Crystal Cloche
+    const bezelGeo = new THREE.TorusGeometry(2.44, 0.075, 20, 72);
+    bezelGeo.rotateX(Math.PI / 2);
+    const upperBezel = new THREE.Mesh(bezelGeo, primaryMetalMat);
+    upperBezel.position.y = 0.92;
+    tagMesh(upperBezel, 5);
+    assemblyGroups[5].add(upperBezel);
+
+    const domeGeo = new THREE.SphereGeometry(2.42, 48, 32, 0, Math.PI * 2, 0, Math.PI * 0.48);
+    const domeMesh = new THREE.Mesh(domeGeo, sapphireDomeMat);
+    domeMesh.position.y = 0.92;
+    domeMesh.renderOrder = 10;
+    tagMesh(domeMesh, 5, false);
+    assemblyGroups[5].add(domeMesh);
+
+    // =========================================================================
+    // 4. UI WIRING & INTERACTIVE CONTROLS
+    // =========================================================================
+    const audioEngine = new EscapementAudio();
+
+    function updateHighlight() {
+      assemblyGroups.forEach((group, idx) => {
+        const isSel = appState.selectedAssembly === idx;
+        group.traverse((child) => {
+          if (child.isMesh && child.material && child.material.emissive && child.material !== rubyJewelMat && child.material !== solMat) {
+            child.material.emissive.setHex(isSel ? 0x1e293b : 0x000000);
+            child.material.emissiveIntensity = isSel ? 0.55 : 0.0;
+          }
+        });
+      });
+
+      const telDefault = document.getElementById('telemetry-default');
+      const asmDetail = document.getElementById('assembly-detail');
+      if (appState.selectedAssembly !== null) {
+        const spec = CALIBRE_ASSEMBLIES[appState.selectedAssembly];
+        telDefault.style.display = 'none';
+        asmDetail.style.display = 'block';
+        document.getElementById('asm-title').textContent = spec.name;
+        document.getElementById('asm-meta').textContent = `${spec.materialSummary} · ${spec.gearRatio}`;
+        document.getElementById('asm-desc').textContent = spec.description;
+      } else {
+        telDefault.style.display = 'flex';
+        asmDetail.style.display = 'none';
+      }
+
+      document.querySelectorAll('#layer-buttons .chip-btn').forEach((btn, idx) => {
+        btn.classList.toggle('active', appState.selectedAssembly === idx);
+      });
+    }
+
+    function setExplodedTarget(val) {
+      appState.explodedTarget = Math.max(0, Math.min(1, val));
+      appState.isCameraTransitioning = true;
+      const pct = Math.round(appState.explodedTarget * 100);
+      document.getElementById('explode-slider').value = String(pct);
+      document.getElementById('explode-slider-val').textContent = `${pct}%`;
+      document.getElementById('active-explode-label').textContent = `Explode ${pct}%`;
+      document.getElementById('quick-explode-btn').textContent = pct > 50 ? 'Assemble Calibre' : 'Explode Calibre';
+    }
+
+    // Populate Layer Buttons
+    const layerBtnsContainer = document.getElementById('layer-buttons');
+    CALIBRE_ASSEMBLIES.forEach((asm) => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'chip-btn';
+      btn.textContent = asm.shortLabel;
+      btn.addEventListener('click', () => {
+        appState.selectedAssembly = appState.selectedAssembly === asm.index ? null : asm.index;
+        updateHighlight();
+      });
+      layerBtnsContainer.appendChild(btn);
+    });
+
+    // Populate Metallurgy Finish Buttons
+    const finishBtnsContainer = document.getElementById('finish-buttons');
+    Object.values(FINISH_PALETTES).forEach((pal) => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = `chip-btn ${pal.id === appState.finishId ? 'active' : ''}`;
+      btn.dataset.finish = pal.id;
+      btn.innerHTML = `<span class="swatch-dot" style="background:${pal.swatchCss}"></span><span>${pal.label}</span>`;
+      btn.addEventListener('click', () => {
+        appState.finishId = pal.id;
+        primaryMetalMat.color.setHex(pal.primaryMetalHex);
+        secondaryMetalMat.color.setHex(pal.secondaryMetalHex);
+        accentBluedMat.color.setHex(pal.accentMetalHex);
+        matteChassisMat.color.setHex(pal.baseChassisHex);
+        dialSurfaceMat.map = createChapterDialTexture(pal, maxAniso);
+        dialSurfaceMat.needsUpdate = true;
+        document.getElementById('active-finish-label').textContent = pal.label;
+        document.querySelectorAll('#finish-buttons .chip-btn').forEach((b) => b.classList.toggle('active', b.dataset.finish === pal.id));
+      });
+      finishBtnsContainer.appendChild(btn);
+    });
+
+    // Populate Lighting Buttons
+    const lightBtnsContainer = document.getElementById('lighting-buttons');
+    Object.values(LIGHTING_CONFIGS).forEach((cfg) => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = `chip-btn ${cfg.id === appState.lightingId ? 'active' : ''}`;
+      btn.dataset.light = cfg.id;
+      btn.textContent = cfg.label;
+      btn.addEventListener('click', () => {
+        appState.lightingId = cfg.id;
+        scene.background.setHex(cfg.backgroundHex);
+        scene.fog = new THREE.FogExp2(cfg.fogHex, cfg.fogDensity);
+        keyLight.color.setHex(cfg.keyColorHex);
+        keyLight.intensity = cfg.keyIntensity;
+        hemiLight.color.setHex(cfg.hemiSkyHex);
+        hemiLight.groundColor.setHex(cfg.hemiGroundHex);
+        hemiLight.intensity = cfg.hemiIntensity;
+        rimLight.color.setHex(cfg.rimColorHex);
+        rimLight.intensity = cfg.rimIntensity;
+        renderer.toneMappingExposure = cfg.exposure;
+        document.querySelectorAll('#lighting-buttons .chip-btn').forEach((b) => b.classList.toggle('active', b.dataset.light === cfg.id));
+      });
+      lightBtnsContainer.appendChild(btn);
+    });
+
+    // Populate Beat Frequency & Speed Buttons
+    const vphBtnsContainer = document.getElementById('vph-buttons');
+    [18000, 21600, 28800, 36000].forEach((freq) => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = `chip-btn ${freq === appState.vph ? 'active' : ''}`;
+      btn.textContent = `${freq.toLocaleString()} vph`;
+      btn.addEventListener('click', () => {
+        appState.vph = freq;
+        document.getElementById('calibre-freq-label').textContent = `Calibre CA-01 · ${(freq / 7200).toFixed(1)} Hz`;
+        Array.from(vphBtnsContainer.querySelectorAll('.chip-btn')).forEach((b) => b.classList.toggle('active', b === btn));
+      });
+      vphBtnsContainer.appendChild(btn);
+    });
+
+    const speedBtnsContainer = document.getElementById('speed-buttons');
+    [
+      { scale: 0, label: 'Pause' },
+      { scale: 1, label: '1× Real' },
+      { scale: 10, label: '10× Drive' },
+      { scale: 60, label: '60× Orbit' }
+    ].forEach((item) => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = `chip-btn ${item.scale === appState.timeScale ? 'active' : ''}`;
+      btn.textContent = item.label;
+      btn.addEventListener('click', () => {
+        appState.timeScale = item.scale;
+        Array.from(speedBtnsContainer.querySelectorAll('.chip-btn[data-speed]')).forEach((b) => b.classList.toggle('active', b === btn));
+      });
+      btn.dataset.speed = String(item.scale);
+      speedBtnsContainer.appendChild(btn);
+    });
+
+    const audioBtn = document.createElement('button');
+    audioBtn.type = 'button';
+    audioBtn.className = 'chip-btn';
+    audioBtn.textContent = 'Acoustic Mute';
+    audioBtn.addEventListener('click', () => {
+      const on = audioEngine.toggle();
+      audioBtn.classList.toggle('active', on);
+      audioBtn.textContent = on ? 'Acoustic On' : 'Acoustic Mute';
+    });
+    speedBtnsContainer.appendChild(audioBtn);
+
+    // Populate Camera Preset Buttons
+    const camBtnsContainer = document.getElementById('camera-buttons');
+    Object.entries(CAMERA_PRESETS).forEach(([id, preset]) => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = `chip-btn ${id === appState.cameraPresetId ? 'active' : ''}`;
+      btn.dataset.cam = id;
+      btn.textContent = preset.label;
+      btn.addEventListener('click', () => {
+        appState.cameraPresetId = id;
+        appState.isCameraTransitioning = true;
+        document.querySelectorAll('#camera-buttons .chip-btn').forEach((b) => b.classList.toggle('active', b.dataset.cam === id));
+      });
+      camBtnsContainer.appendChild(btn);
+    });
+
+    // Tab Switching & Slider Events
+    document.querySelectorAll('.tab-btn').forEach((tabBtn) => {
+      tabBtn.addEventListener('click', () => {
+        const target = tabBtn.dataset.tab;
+        document.querySelectorAll('.tab-btn').forEach((b) => b.classList.toggle('active', b === tabBtn));
+        document.querySelectorAll('.tab-pane').forEach((pane) => pane.classList.toggle('active', pane.id === `pane-${target}`));
+      });
+    });
+
+    document.getElementById('explode-slider').addEventListener('input', (e) => {
+      setExplodedTarget(Number(e.target.value) / 100);
+    });
+
+    document.getElementById('quick-explode-btn').addEventListener('click', () => {
+      setExplodedTarget(appState.explodedTarget > 0.5 ? 0 : 1);
+    });
+
+    document.getElementById('clear-focus-btn').addEventListener('click', () => {
+      appState.selectedAssembly = null;
+      updateHighlight();
+    });
+
+    document.getElementById('reset-all-btn').addEventListener('click', () => {
+      setExplodedTarget(0);
+      appState.selectedAssembly = null;
+      appState.cameraPresetId = 'overview';
+      appState.isCameraTransitioning = true;
+      updateHighlight();
+    });
+
+    const dockPanel = document.getElementById('dock-panel');
+    const collapseBtn = document.getElementById('collapse-dock-btn');
+    function toggleDock() {
+      const isHidden = dockPanel.classList.toggle('hidden');
+      collapseBtn.textContent = isHidden ? '▴ Show Controls (H)' : '▾ Hide Controls (H)';
+    }
+    collapseBtn.addEventListener('click', toggleDock);
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'h' || e.key === 'H') toggleDock();
+      if (e.key === 'e' || e.key === 'E') setExplodedTarget(appState.explodedTarget > 0.5 ? 0 : 1);
+    });
+
+    // Raycasting on Layer 1
+    const raycaster = new THREE.Raycaster();
+    raycaster.layers.set(1);
+    const pointerNdc = new THREE.Vector2();
+    let downPos = { x: 0, y: 0 };
+    renderer.domElement.addEventListener('pointerdown', (e) => { downPos = { x: e.clientX, y: e.clientY }; });
+    renderer.domElement.addEventListener('pointerup', (e) => {
+      if ((e.clientX - downPos.x) ** 2 + (e.clientY - downPos.y) ** 2 > 36) return;
+      pointerNdc.x = (e.clientX / window.innerWidth) * 2 - 1;
+      pointerNdc.y = -(e.clientY / window.innerHeight) * 2 + 1;
+      raycaster.setFromCamera(pointerNdc, camera);
+      const hits = raycaster.intersectObjects(interactableMeshes, false);
+      if (hits.length > 0 && typeof hits[0].object.userData.assemblyIndex === 'number') {
+        appState.selectedAssembly = hits[0].object.userData.assemblyIndex;
+        updateHighlight();
+      }
+    });
+
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+
+    // =========================================================================
+    // 5. 60FPS KINEMATICS & DAMPED RENDER LOOP
+    // =========================================================================
+    const _targetCamPos = new THREE.Vector3();
+    const _targetLook = new THREE.Vector3();
+    let lastTime = performance.now();
+    let simTime = 0;
+    let lastTelUpdate = 0;
+
+    function animate(now) {
+      requestAnimationFrame(animate);
+      const dt = Math.min((now - lastTime) / 1000, 0.1);
+      lastTime = now;
+
+      // Damped Exploded Separation
+      appState.explodedCurrent += (appState.explodedTarget - appState.explodedCurrent) * (1 - Math.exp(-7.5 * dt));
+      CALIBRE_ASSEMBLIES.forEach((spec, idx) => {
+        assemblyGroups[idx].position.y = spec.explodedOffset * appState.explodedCurrent;
+      });
+
+      // Damped Camera Presets
+      if (appState.isCameraTransitioning) {
+        const preset = CAMERA_PRESETS[appState.cameraPresetId];
+        const exp = appState.explodedCurrent;
+        const distScale = 1 + exp * 0.24;
+        _targetCamPos.set(preset.position[0] * distScale, preset.position[1] * (1 + exp * 0.28), preset.position[2] * distScale);
+        _targetLook.set(preset.target[0], preset.target[1] + exp * 0.65, preset.target[2]);
+        const alpha = 1 - Math.exp(-6.5 * dt);
+        camera.position.lerp(_targetCamPos, alpha);
+        controls.target.lerp(_targetLook, alpha);
+        if (camera.position.distanceToSquared(_targetCamPos) < 0.0008) {
+          appState.isCameraTransitioning = false;
+        }
+      }
+      controls.update();
+
+      // Advance Horological & Celestial Kinematics
+      simTime += dt * appState.timeScale;
+      const ticksPerSec = appState.vph / 3600;
+      const oscHz = appState.vph / 7200;
+
+      const cageAngle = (simTime * Math.PI * 2) / 60;
+      const phase = simTime * oscHz * Math.PI * 2;
+      const balAngle = Math.sin(phase) * 1.35;
+      const springScale = 1 + Math.sin(phase) * 0.085;
+
+      const totalTicks = simTime * ticksPerSec;
+      const discreteTick = Math.floor(totalTicks) + Math.pow(totalTicks % 1, 3);
+      escapementWheel.rotation.y = -(discreteTick * ((Math.PI * 2) / 30));
+
+      tourbillonCarriage.rotation.y = cageAngle;
+      balanceWheel.rotation.y = balAngle;
+      hairspringMesh.scale.set(springScale, 1, springScale);
+
+      fourthWheel.rotation.y = -cageAngle;
+      thirdWheel.rotation.y = fourthWheel.rotation.y / 3.5;
+      centerWheel.rotation.y = -thirdWheel.rotation.y / 4.0;
+      mainspringWheel.rotation.y = centerWheel.rotation.y / 3.0;
+
+      const earthOrbit = simTime * 0.22;
+      earthArm.rotation.y = earthOrbit;
+      venusArm.rotation.y = earthOrbit * (365.25 / 224.7);
+      mercuryArm.rotation.y = earthOrbit * (365.25 / 87.97);
+      moonArm.rotation.y = earthOrbit * 12.368;
+      earthGlobeGroup.rotation.y = simTime * 2.4;
+
+      armillaryOuterRing.rotation.y = simTime * 0.06;
+      armillaryInnerRing.rotation.x = -simTime * 0.09;
+
+      audioEngine.update(simTime, ticksPerSec, appState.timeScale);
+
+      if (now - lastTelUpdate > 220) {
+        lastTelUpdate = now;
+        document.getElementById('tel-elapsed').textContent = `Elapsed: ${simTime.toFixed(1)}s`;
+        document.getElementById('tel-rpm').textContent = `Carriage: ${(appState.timeScale * 1.0).toFixed(1)} RPM`;
+        document.getElementById('tel-balance').textContent = `Balance: ${Math.round(THREE.MathUtils.radToDeg(balAngle))}°`;
+      }
+
+      renderer.render(scene, camera);
+    }
+
+    requestAnimationFrame(animate);
+  </script>
+</body>
+</html>
