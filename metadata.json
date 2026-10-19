@@ -1,0 +1,6 @@
+{
+  "name": "Chronos Astralis — 3D Horological Orrery",
+  "description": "Interactive 3D mechanical tourbillon calibre and celestial armillary orrery built with Three.js studio PBR rendering.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
